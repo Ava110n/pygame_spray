@@ -1,61 +1,59 @@
+import random
+
+import numpy
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 import numpy as np
-import torch
-import torch.nn as nn
-import matplotlib.pyplot as plt
 
 
-from tensorflow.keras.datasets import fashion_mnist
-
-
-class CNN:
+class Catfish:
     def __init__(self):
-        self.model = nn.Sequential(# 28 * 28
-            nn.Conv2d(1, 32, (5,5)), # 24 * 24 * 32
-            nn.ReLU(),
-            nn.MaxPool2d((2,2)), # 12 * 12 * 32
-            nn.Conv2d(32, 64, (3,3)), # 10 * 10 * 64
-            nn.ReLU(),
-            nn.MaxPool2d((2,2)), # 5 * 5 * 64
-            nn.Flatten(start_dim=0),
-            nn.Linear(5 * 5 * 64,10),
-            nn.Sigmoid()
-            )
+        self.weights = np.zeros((7, 7, 2))
+        self.learning_rate = 0.1
+        self.coop = 2
+        self.init_weights()
 
-        self.optimizer = torch.optim.SGD(params=self.model.parameters())
-        self.loss = nn.MSELoss()
-        self.epoches = 1
+    def init_weights(self):
+        mx = self.weights.shape[0]
+        my = self.weights.shape[1]
+        for i in range(mx):
+            for j in range(my):
+                self.weights[i, j] = (i, j)
 
+    def fit(self, X, epochs: int = 10):
+        mx = self.weights.shape[0]
+        my = self.weights.shape[1]
+        for epoch in range(1, epochs + 1):
+            np.random.shuffle(X)
 
-    def train(self, X, Y):
-        accuracy = 0
-        losses = []
-        for i in range(self.epoches):
-            loss_epoch = 0
-            for x, y in zip(X, Y):
-                x = x.view(-1, 28, 28)
-                output = self.model(x)
-                index = torch.argmax(output)
-                if index == y:
-                    accuracy += 1
-                loss = self.loss(output, torch.eye(10)[int(y)])
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                loss_epoch += loss
+            for x in X:
+                i = self.l2_per_element(self.weights, x).argmin()
+                i, j = (i % mx, i // my)
+                # h = np.full(
+                #     (mx, my),
+                #     fill_value=lambda i,j: )
 
-            losses.append(loss_epoch/X.shape[0])
+    def l2_per_element(self, a, b):
+        mx = self.weights.shape[0]
+        my = self.weights.shape[1]
+        res = numpy.zeros((mx, my))
+        for x in range(mx):
+            for y in range(my):
+                res[x, y] = self.l2(a[x, y], b)
+        return res
 
-
-
-
-def main():
-    (X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
-    X_train = torch.tensor(X_train).float()
-    y_train = torch.tensor(y_train).float()
-
-    cnn = CNN()
-    cnn.train(X_train, y_train)
+    def l2(self, a, b):
+        return np.linalg.norm(a - b)
 
 
-if __name__ == "__main__":
-    main()
+X, y = load_iris(return_X_y=True)
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+pca = PCA(n_components=2)
+X = pca.fit_transform(X)
+som = Catfish()
+r = som.l2_per_element(som.weights, X[0])
+print(r)
+print(r.argmin())
+print(r[])

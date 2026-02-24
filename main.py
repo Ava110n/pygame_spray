@@ -1,59 +1,71 @@
 import random
 
-import numpy
-from sklearn.datasets import load_iris
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-import numpy as np
+import pygame
+from sklearn.cluster import DBSCAN
+
+class Point:
+    def __init__(self, x, y, color="red"):
+        self.x = x
+        self.y = y
+        self.color = color
+
+colors = ["yellow", "blue", "green", "cyan", "pink", "brown", "orange", "red"]
+
+def generate_points(center: tuple[int, int], eps: int = 30, min_n: int = 3, \
+                    max_n: int = 7) -> list[tuple[int, int]]:
+    return list(
+        (center[0] + random.randint(-eps, eps),
+         center[1] + random.randint(-eps, eps))
+        for _ in range(random.randint(min_n, max_n))
+    )
 
 
-class Catfish:
-    def __init__(self):
-        self.weights = np.zeros((7, 7, 2))
-        self.learning_rate = 0.1
-        self.coop = 2
-        self.init_weights()
+def main():
+    pygame.init()
 
-    def init_weights(self):
-        mx = self.weights.shape[0]
-        my = self.weights.shape[1]
-        for i in range(mx):
-            for j in range(my):
-                self.weights[i, j] = (i, j)
+    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
+    screen.fill("white")
+    pygame.display.update()
+    points = []
+    while True:
+        down = False
+        mouse_pos = None
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                print(event.type)
+                if event.button == 1:
+                    down = True
+                    mouse_pos = event.pos
+            if event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    down = False
+            if event.type == pygame.WINDOWRESIZED:
+                screen.fill("white")
+                for x in points:
+                    pygame.draw.circle(screen, "black", x, 5)
+                #     pygame.draw.circle(screen, "red", event.pos, 5)
+                #     points.append(event.pos)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_d:
+                    dbscan = DBSCAN(50, min_samples=3)
+                    res = dbscan.fit_predict(points)
+                    for i, x in enumerate(res):
+                        pygame.draw.circle(screen, colors[x], points[i], 5)
 
-    def fit(self, X, epochs: int = 10):
-        mx = self.weights.shape[0]
-        my = self.weights.shape[1]
-        for epoch in range(1, epochs + 1):
-            np.random.shuffle(X)
+            if down:
+                if len(points) == 0 or (mouse_pos[0]-points[-1][0])**2 + \
+                        (mouse_pos[1]-points[-1][1])**2 >= 400:
+                    for x in generate_points(mouse_pos):
+                        points.append(x)
+                        pygame.draw.circle(screen, "black", x, 5)
+                    points.append(mouse_pos)
 
-            for x in X:
-                i = self.l2_per_element(self.weights, x).argmin()
-                i, j = (i % mx, i // my)
-                # h = np.full(
-                #     (mx, my),
-                #     fill_value=lambda i,j: )
-
-    def l2_per_element(self, a, b):
-        mx = self.weights.shape[0]
-        my = self.weights.shape[1]
-        res = numpy.zeros((mx, my))
-        for x in range(mx):
-            for y in range(my):
-                res[x, y] = self.l2(a[x, y], b)
-        return res
-
-    def l2(self, a, b):
-        return np.linalg.norm(a - b)
+        pygame.display.update()
 
 
-X, y = load_iris(return_X_y=True)
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
-pca = PCA(n_components=2)
-X = pca.fit_transform(X)
-som = Catfish()
-r = som.l2_per_element(som.weights, X[0])
-print(r)
-print(r.argmin())
-print(r[])
+
+if __name__ == '__main__':
+    main()
